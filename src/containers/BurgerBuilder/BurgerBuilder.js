@@ -5,6 +5,8 @@ import Burger from '../../components/Burger/Burger'
 import BuildControls from '../../components/Burger/Buildcontrols/BuildControls'
 import OrderSummary from '../../components/Burger/OrderSummary/OrderSummary'
 import Modal from '../../components/UI/Modal/modal'
+import axios from '../../axios-orders'
+import Spinner from '../../components/UI/Spinner/Spinner'
 
 const INGREDIENTS_PRICES = {
   Salad: 1.49,
@@ -16,6 +18,7 @@ const INGREDIENTS_PRICES = {
 class BurgerBuilder extends Component {
 
   state = {
+    loading: false,
     ingredients: {
       Salad:0,
       Cheese:0,
@@ -85,7 +88,27 @@ class BurgerBuilder extends Component {
   }
 
   countinuePurchaseHandler = () => {
-    alert('countinue!!!')
+
+    this.setState({loading: true})
+
+    const order = {
+        ingredients: this.state.ingredients,
+        price:this.state.totalPrice,
+        customer: {
+          name:'hong',
+          email:'chihihung@gmail.com',
+          address:'3414 S Lituanica Ave, Chicago, IL'
+        }
+    }
+    
+    axios.post('/order.json',order)
+      .then(res => {
+        this.setState({loading: false, purchasing: false})
+      })
+      .catch(err => {
+         this.setState({loading: false})
+        console.log(err)
+      })
   }
 
   render () {
@@ -94,16 +117,21 @@ class BurgerBuilder extends Component {
     for (let key in disabledIngredient) {
       disabledIngredient[key] = disabledIngredient[key] <= 0
     }
+    let order = <OrderSummary
+        ingredients={this.state.ingredients}
+        totalPrice={this.state.totalPrice.toFixed(2)}
+        purchaseCancel={this.cancelPurchaseHandler}
+        purchaseContinue={this.countinuePurchaseHandler}/>
+
+    if(this.state.loading){
+      order = <Spinner />
+    }
 
 
     return (
       <Aux>
         <Modal show={this.state.purchasing} modalClosed={this.cancelPurchaseHandler}>
-          <OrderSummary
-            ingredients={this.state.ingredients}
-            totalPrice={this.state.totalPrice.toFixed(2)}
-            purchaseCancel={this.cancelPurchaseHandler}
-            purchaseContinue={this.countinuePurchaseHandler}/>
+          {order}
         </Modal>
         <Burger ingredients={this.state.ingredients}/>
         <BuildControls
