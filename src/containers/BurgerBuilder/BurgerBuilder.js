@@ -1,19 +1,23 @@
-import React, { Component } from 'react'
+import React, { Component, Suspense, lazy } from 'react'
 
 import Aux from '../../hoc/Aux'
-import Burger from '../../components/Burger/Burger'
-import BuildControls from '../../components/Burger/Buildcontrols/BuildControls'
+// import Burger from '../../components/Burger/Burger'
+// import BuildControls from '../../components/Burger/Buildcontrols/BuildControls'
 import OrderSummary from '../../components/Burger/OrderSummary/OrderSummary'
 import Modal from '../../components/UI/Modal/modal'
 import axios from '../../axios-orders'
 import Spinner from '../../components/UI/Spinner/Spinner'
 import withErrorHandler from '../../hoc/withErrorHandler/withErrorHandler'
 
+const Burger = lazy(() => import('../../components/Burger/Burger'))
+const BuildControls = lazy(() => import('../../components/Burger/Buildcontrols/BuildControls'))
+
 const INGREDIENTS_PRICES = {
   Salad: 1.49,
   Cheese: .99,
   Meat: 2.99,
-  Bacon: 1.49
+  Bacon: 1.49,
+  originalPrice:1.99
 }
 
 class BurgerBuilder extends Component {
@@ -26,7 +30,7 @@ class BurgerBuilder extends Component {
       Meat:0,
       Bacon:0
     },
-    totalPrice: 1.99,
+    totalPrice: INGREDIENTS_PRICES['originalPrice'],
     purchasable: false,
     purchasing: false
   }
@@ -34,10 +38,11 @@ class BurgerBuilder extends Component {
   updatePurchasable (ingredients) {
     let result = Object.keys(ingredients)
     .reduce((sum, key) => {
-      return sum + ingredients[key]
-    },0)
+      return sum + ingredients[key]*INGREDIENTS_PRICES[key]
+    },INGREDIENTS_PRICES['originalPrice'])
     this.setState({
-      purchasable: result > 0
+      totalPrice: result,
+      purchasable: result > INGREDIENTS_PRICES['originalPrice']
     })
   }
 
@@ -112,6 +117,19 @@ class BurgerBuilder extends Component {
       })
   }
 
+  componentDidMount(){
+    this.setState({loading: true})
+    axios.get('/ingredients.json')
+      .then(response => {
+        this.setState({ingredients:response.data})
+        this.updatePurchasable(this.state.ingredients)
+        this.setState({loading: false})
+      })
+      .catch(err => {
+        this.setState({loading: false})
+      })
+  }
+
   render () {
     const disabledIngredient = {...this.state.ingredients}
 
@@ -134,16 +152,17 @@ class BurgerBuilder extends Component {
         <Modal show={this.state.purchasing} modalClosed={this.cancelPurchaseHandler}>
           {order}
         </Modal>
-        <Burger ingredients={this.state.ingredients}/>
-        <BuildControls
-          prices = {INGREDIENTS_PRICES}
-          price={this.state.totalPrice.toFixed(2)}
-          add={this.addIngredientHander}
-          remove={this.lessIngredientHander}
-          disable={disabledIngredient}
-          purchasable={this.state.purchasable}
-          modalHandler={this.modalHandler}/>
-
+        <Suspense fallback={<Spinner />}>
+          <Burger ingredients={this.state.ingredients}/>
+          <BuildControls
+            prices = {INGREDIENTS_PRICES}
+            price={this.state.totalPrice.toFixed(2)}
+            add={this.addIngredientHander}
+            remove={this.lessIngredientHander}
+            disable={disabledIngredient}
+            purchasable={this.state.purchasable}
+            modalHandler={this.modalHandler}/>    
+        </Suspense>
       </Aux>
     )
   }
