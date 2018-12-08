@@ -9,13 +9,18 @@ const withErrorHandler = (WrappedComponent,interceptors) => {
             error: null
         }
         componentWillMount(){
-            interceptors.request.use(req => {
+            this.reqInterceptors = interceptors.request.use(req => {
                 this.setState({error:null})
                 return req
             })
-            interceptors.response.use(null,err => {
+            this.resInterceptors = interceptors.response.use(null,err => {
                 this.setState({error:err})
             })
+        }
+
+        componentWillUnmount() {
+            interceptors.request.eject(this.reqInterceptors)
+            interceptors.response.eject(this.resInterceptors)
         }
 
         modalClosedHandler = () => {
